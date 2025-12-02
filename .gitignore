@@ -1,0 +1,3 @@
+# Docker
+*.log
+.DS_Store
