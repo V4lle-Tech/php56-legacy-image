@@ -21,7 +21,7 @@ RUN apt-get update --allow-unauthenticated && \
         libfreetype6-dev \
         libzip-dev \
         libxml2-dev \
-        libmysqlclient-dev \
+        default-libmysqlclient-dev \
         default-mysql-client && \
     docker-php-ext-configure gd --with-freetype-dir=/usr/include/ --with-jpeg-dir=/usr/include/ && \
     docker-php-ext-install -j$(nproc) \
