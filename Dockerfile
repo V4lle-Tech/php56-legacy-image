@@ -1,4 +1,4 @@
-FROM php:5.6-cli
+FROM php:5.6-apache
 
 ENV DEBIAN_FRONTEND=noninteractive \
     TZ=UTC
@@ -21,9 +21,11 @@ RUN apt-get update --allow-unauthenticated && \
         libfreetype6-dev \
         libzip-dev \
         libxml2-dev \
+        libmysqlclient-dev \
         default-mysql-client && \
     docker-php-ext-configure gd --with-freetype-dir=/usr/include/ --with-jpeg-dir=/usr/include/ && \
     docker-php-ext-install -j$(nproc) \
+        mysql \
         mysqli \
         pdo \
         pdo_mysql \
@@ -55,8 +57,20 @@ RUN useradd -m -s /bin/bash -u 1000 coder 2>/dev/null || true && \
     mkdir -p /workspaces && \
     chown -R 1000:1000 /workspaces
 
-WORKDIR /workspaces
-USER coder
+# Configurar Apache
+RUN a2enmod rewrite && \
+    sed -i 's!/var/www/html!/workspaces!g' /etc/apache2/sites-available/000-default.conf && \
+    echo '<Directory /workspaces>\n\
+    Options Indexes FollowSymLinks\n\
+    AllowOverride All\n\
+    Require all granted\n\
+</Directory>' >> /etc/apache2/apache2.conf
 
-# Mantener container vivo para kubectl exec
-CMD ["sleep", "infinity"]
+# Ajustar permisos para que Apache (www-data) y coder puedan trabajar
+RUN chown -R www-data:www-data /workspaces && \
+    usermod -a -G www-data coder
+
+WORKDIR /workspaces
+
+# Iniciar Apache en foreground
+CMD ["apache2-foreground"]
