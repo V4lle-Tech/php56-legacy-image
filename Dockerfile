@@ -72,5 +72,7 @@ RUN chown -R www-data:www-data /workspaces && \
 
 WORKDIR /workspaces
 
+EXPOSE 80
+
 # Iniciar Apache en foreground
 CMD ["apache2-foreground"]

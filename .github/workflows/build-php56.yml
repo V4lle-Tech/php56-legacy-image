@@ -29,13 +29,6 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Versión de la imagen: $VERSION"
 
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
@@ -45,7 +38,132 @@ jobs:
             type=raw,value=latest
             type=raw,value=${{ steps.version.outputs.version }}
 
-      - name: Build and push Docker image
+      - name: Build Docker image (without push)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          load: true
+
+      - name: Validate Docker image
+        run: |
+          echo "🔍 Validando imagen Docker..."
+          IMAGE_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}"
+
+          # Validar versión de PHP 5.6
+          echo "✓ Verificando versión de PHP..."
+          PHP_VERSION=$(docker run --rm $IMAGE_TAG php -r "echo PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION;")
+          if [ "$PHP_VERSION" != "5.6" ]; then
+            echo "❌ Error: Se esperaba PHP 5.6, se encontró PHP $PHP_VERSION"
+            exit 1
+          fi
+          echo "  PHP $PHP_VERSION detectado"
+
+          # Validar extensiones PHP requeridas
+          echo "✓ Verificando extensiones PHP..."
+          REQUIRED_EXTS="mysql mysqli pdo pdo_mysql gd mbstring xml zip opcache"
+          for ext in $REQUIRED_EXTS; do
+            if ! docker run --rm $IMAGE_TAG php -m | grep -q "^$ext$"; then
+              echo "❌ Error: Extensión PHP '$ext' no encontrada"
+              exit 1
+            fi
+            echo "  - $ext ✓"
+          done
+
+          # Validar configuraciones PHP
+          echo "✓ Verificando configuraciones PHP..."
+
+          SHORT_OPEN_TAG=$(docker run --rm $IMAGE_TAG php -r "echo ini_get('short_open_tag');")
+          if [ "$SHORT_OPEN_TAG" != "1" ]; then
+            echo "❌ Error: short_open_tag debería estar On"
+            exit 1
+          fi
+          echo "  - short_open_tag: On ✓"
+
+          MEMORY_LIMIT=$(docker run --rm $IMAGE_TAG php -r "echo ini_get('memory_limit');")
+          if [ "$MEMORY_LIMIT" != "512M" ]; then
+            echo "❌ Error: memory_limit debería ser 512M, es $MEMORY_LIMIT"
+            exit 1
+          fi
+          echo "  - memory_limit: $MEMORY_LIMIT ✓"
+
+          UPLOAD_MAX=$(docker run --rm $IMAGE_TAG php -r "echo ini_get('upload_max_filesize');")
+          if [ "$UPLOAD_MAX" != "64M" ]; then
+            echo "❌ Error: upload_max_filesize debería ser 64M, es $UPLOAD_MAX"
+            exit 1
+          fi
+          echo "  - upload_max_filesize: $UPLOAD_MAX ✓"
+
+          POST_MAX=$(docker run --rm $IMAGE_TAG php -r "echo ini_get('post_max_size');")
+          if [ "$POST_MAX" != "64M" ]; then
+            echo "❌ Error: post_max_size debería ser 64M, es $POST_MAX"
+            exit 1
+          fi
+          echo "  - post_max_size: $POST_MAX ✓"
+
+          MAX_EXEC=$(docker run --rm $IMAGE_TAG php -r "echo ini_get('max_execution_time');")
+          if [ "$MAX_EXEC" != "300" ]; then
+            echo "❌ Error: max_execution_time debería ser 300, es $MAX_EXEC"
+            exit 1
+          fi
+          echo "  - max_execution_time: $MAX_EXEC ✓"
+
+          # Validar Composer 1.x
+          echo "✓ Verificando Composer..."
+          COMPOSER_VERSION=$(docker run --rm $IMAGE_TAG composer --version | grep -oP '\d+\.\d+\.\d+' | head -1)
+          COMPOSER_MAJOR=$(echo $COMPOSER_VERSION | cut -d. -f1)
+          if [ "$COMPOSER_MAJOR" != "1" ]; then
+            echo "❌ Error: Se esperaba Composer 1.x, se encontró $COMPOSER_VERSION"
+            exit 1
+          fi
+          echo "  Composer $COMPOSER_VERSION ✓"
+
+          # Validar usuario coder con UID 1000
+          echo "✓ Verificando usuario coder..."
+          CODER_UID=$(docker run --rm $IMAGE_TAG id -u coder 2>/dev/null || echo "0")
+          if [ "$CODER_UID" != "1000" ]; then
+            echo "❌ Error: Usuario coder debería tener UID 1000, tiene $CODER_UID"
+            exit 1
+          fi
+          echo "  Usuario coder con UID 1000 ✓"
+
+          # Validar mod_rewrite de Apache
+          echo "✓ Verificando módulos de Apache..."
+          if ! docker run --rm $IMAGE_TAG apache2ctl -M 2>/dev/null | grep -q "rewrite_module"; then
+            echo "❌ Error: Módulo rewrite de Apache no está habilitado"
+            exit 1
+          fi
+          echo "  mod_rewrite habilitado ✓"
+
+          # Validar directorio /workspaces
+          echo "✓ Verificando directorio /workspaces..."
+          if ! docker run --rm $IMAGE_TAG test -d /workspaces; then
+            echo "❌ Error: Directorio /workspaces no existe"
+            exit 1
+          fi
+          echo "  Directorio /workspaces existe ✓"
+
+          # Validar puerto 80 expuesto
+          echo "✓ Verificando puerto 80 expuesto..."
+          if ! docker inspect $IMAGE_TAG | grep -q '"80/tcp"'; then
+            echo "❌ Error: Puerto 80 no está expuesto"
+            exit 1
+          fi
+          echo "  Puerto 80 expuesto ✓"
+
+          echo ""
+          echo "✅ Todas las validaciones pasaron exitosamente"
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
