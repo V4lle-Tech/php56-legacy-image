@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh run list:*)",
+      "Bash(gh run view:*)",
+      "Bash(gh api:*)",
+      "Bash(cat:*)",
+      "Bash(git -C /Users/v4lle/Developer/Infraestructura/Site/php56-legacy-image diff Dockerfile)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nfix: usar default-libmysqlclient-dev para Debian Stretch\n\nEl paquete libmysqlclient-dev no está disponible en los repositorios \narchivados de Debian Stretch. El paquete correcto es \ndefault-libmysqlclient-dev que es compatible con mysqli y pdo_mysql.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git push:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

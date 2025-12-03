@@ -12,27 +12,28 @@ RUN sed -i 's/deb.debian.org/archive.debian.org/g' /etc/apt/sources.list && \
 # Instalar dependencias base y extensiones PHP
 RUN apt-get update --allow-unauthenticated && \
     apt-get install -y --allow-unauthenticated \
-        git \
-        unzip \
-        curl \
-        wget \
-        libpng-dev \
-        libjpeg-dev \
-        libfreetype6-dev \
-        libzip-dev \
-        libxml2-dev \
-        default-libmysqlclient-dev \
-        default-mysql-client && \
+    git \
+    unzip \
+    curl \
+    wget \
+    libpng-dev \
+    libjpeg-dev \
+    libfreetype6-dev \
+    libzip-dev \
+    libxml2-dev \
+    default-libmysqlclient-dev \
+    default-mysql-client && \
     docker-php-ext-configure gd --with-freetype-dir=/usr/include/ --with-jpeg-dir=/usr/include/ && \
     docker-php-ext-install -j$(nproc) \
-        mysqli \
-        pdo \
-        pdo_mysql \
-        gd \
-        mbstring \
-        xml \
-        zip \
-        opcache && \
+    mysql \
+    mysqli \
+    pdo \
+    pdo_mysql \
+    gd \
+    mbstring \
+    xml \
+    zip \
+    opcache && \
     rm -rf /var/lib/apt/lists/*
 
 # Configuración PHP para código legacy
@@ -63,7 +64,7 @@ RUN a2enmod rewrite && \
     Options Indexes FollowSymLinks\n\
     AllowOverride All\n\
     Require all granted\n\
-</Directory>' >> /etc/apache2/apache2.conf
+    </Directory>' >> /etc/apache2/apache2.conf
 
 # Ajustar permisos para que Apache (www-data) y coder puedan trabajar
 RUN chown -R www-data:www-data /workspaces && \
