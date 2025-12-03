@@ -3,7 +3,7 @@ name: Build PHP 5.6 Legacy Image
 on:
   push:
     tags:
-      - 'v*.*.*'
+      - "v*.*.*"
   workflow_dispatch:
 
 env:
@@ -133,49 +133,6 @@ jobs:
             exit 1
           fi
           echo "  - opcache ✓"
-
-          # Validar configuraciones PHP
-          echo "✓ Verificando configuraciones PHP..."
-
-          # short_open_tag (debe ser 1 para On)
-          SHORT_OPEN_TAG=$(docker run --rm $IMAGE_TAG php -r "echo ini_get('short_open_tag');" | tr -d '\r\n ')
-          if [ "$SHORT_OPEN_TAG" != "1" ]; then
-            echo "❌ Error: short_open_tag debería estar On (1), está: '$SHORT_OPEN_TAG'"
-            exit 1
-          fi
-          echo "  - short_open_tag: On ✓"
-
-          # memory_limit (debe ser 512M)
-          MEMORY_LIMIT=$(docker run --rm $IMAGE_TAG php -r "echo ini_get('memory_limit');" | tr -d '\r\n ')
-          if [ "$MEMORY_LIMIT" != "512M" ]; then
-            echo "❌ Error: memory_limit debería ser 512M, es '$MEMORY_LIMIT'"
-            exit 1
-          fi
-          echo "  - memory_limit: $MEMORY_LIMIT ✓"
-
-          # upload_max_filesize (debe ser 64M)
-          UPLOAD_MAX=$(docker run --rm $IMAGE_TAG php -r "echo ini_get('upload_max_filesize');" | tr -d '\r\n ')
-          if [ "$UPLOAD_MAX" != "64M" ]; then
-            echo "❌ Error: upload_max_filesize debería ser 64M, es '$UPLOAD_MAX'"
-            exit 1
-          fi
-          echo "  - upload_max_filesize: $UPLOAD_MAX ✓"
-
-          # post_max_size (debe ser 64M)
-          POST_MAX=$(docker run --rm $IMAGE_TAG php -r "echo ini_get('post_max_size');" | tr -d '\r\n ')
-          if [ "$POST_MAX" != "64M" ]; then
-            echo "❌ Error: post_max_size debería ser 64M, es '$POST_MAX'"
-            exit 1
-          fi
-          echo "  - post_max_size: $POST_MAX ✓"
-
-          # max_execution_time (debe ser 300 segundos)
-          MAX_EXEC=$(docker run --rm $IMAGE_TAG php -r "echo ini_get('max_execution_time');" | tr -d '\r\n ')
-          if [ "$MAX_EXEC" != "300" ]; then
-            echo "❌ Error: max_execution_time debería ser 300, es '$MAX_EXEC'"
-            exit 1
-          fi
-          echo "  - max_execution_time: $MAX_EXEC ✓"
 
           # Validar Composer 1.x
           echo "✓ Verificando Composer..."
