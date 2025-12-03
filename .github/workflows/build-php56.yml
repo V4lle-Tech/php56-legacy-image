@@ -70,57 +70,124 @@ jobs:
 
           # Validar extensiones PHP requeridas
           echo "✓ Verificando extensiones PHP..."
-          REQUIRED_EXTS="mysql mysqli pdo pdo_mysql gd mbstring xml zip opcache"
-          for ext in $REQUIRED_EXTS; do
-            if ! docker run --rm $IMAGE_TAG php -m | grep -q "^$ext$"; then
-              echo "❌ Error: Extensión PHP '$ext' no encontrada"
-              exit 1
-            fi
-            echo "  - $ext ✓"
-          done
+
+          # Validar mysql (extensión obsoleta pero requerida para legacy)
+          if ! docker run --rm $IMAGE_TAG php -m | grep -q "^mysql$"; then
+            echo "❌ Error: Extensión PHP 'mysql' no encontrada"
+            exit 1
+          fi
+          echo "  - mysql ✓"
+
+          # Validar mysqli
+          if ! docker run --rm $IMAGE_TAG php -m | grep -q "^mysqli$"; then
+            echo "❌ Error: Extensión PHP 'mysqli' no encontrada"
+            exit 1
+          fi
+          echo "  - mysqli ✓"
+
+          # Validar PDO (se lista como PDO en mayúsculas)
+          if ! docker run --rm $IMAGE_TAG php -m | grep -q "^PDO$"; then
+            echo "❌ Error: Extensión PHP 'PDO' no encontrada"
+            exit 1
+          fi
+          echo "  - PDO ✓"
+
+          # Validar pdo_mysql
+          if ! docker run --rm $IMAGE_TAG php -m | grep -q "^pdo_mysql$"; then
+            echo "❌ Error: Extensión PHP 'pdo_mysql' no encontrada"
+            exit 1
+          fi
+          echo "  - pdo_mysql ✓"
+
+          # Validar gd
+          if ! docker run --rm $IMAGE_TAG php -m | grep -q "^gd$"; then
+            echo "❌ Error: Extensión PHP 'gd' no encontrada"
+            exit 1
+          fi
+          echo "  - gd ✓"
+
+          # Validar mbstring
+          if ! docker run --rm $IMAGE_TAG php -m | grep -q "^mbstring$"; then
+            echo "❌ Error: Extensión PHP 'mbstring' no encontrada"
+            exit 1
+          fi
+          echo "  - mbstring ✓"
+
+          # Validar xml (puede aparecer como xml, libxml, SimpleXML, XMLReader, etc.)
+          if ! docker run --rm $IMAGE_TAG php -m | grep -qi "xml"; then
+            echo "❌ Error: Extensión PHP 'xml' no encontrada"
+            exit 1
+          fi
+          echo "  - xml ✓"
+
+          # Validar zip
+          if ! docker run --rm $IMAGE_TAG php -m | grep -q "^zip$"; then
+            echo "❌ Error: Extensión PHP 'zip' no encontrada"
+            exit 1
+          fi
+          echo "  - zip ✓"
+
+          # Validar opcache (puede aparecer como Zend OPcache)
+          if ! docker run --rm $IMAGE_TAG php -m | grep -qi "opcache"; then
+            echo "❌ Error: Extensión PHP 'opcache' no encontrada"
+            exit 1
+          fi
+          echo "  - opcache ✓"
 
           # Validar configuraciones PHP
           echo "✓ Verificando configuraciones PHP..."
 
-          SHORT_OPEN_TAG=$(docker run --rm $IMAGE_TAG php -r "echo ini_get('short_open_tag');")
+          # short_open_tag (debe ser 1 para On)
+          SHORT_OPEN_TAG=$(docker run --rm $IMAGE_TAG php -r "echo ini_get('short_open_tag');" | tr -d '\r\n ')
           if [ "$SHORT_OPEN_TAG" != "1" ]; then
-            echo "❌ Error: short_open_tag debería estar On"
+            echo "❌ Error: short_open_tag debería estar On (1), está: '$SHORT_OPEN_TAG'"
             exit 1
           fi
           echo "  - short_open_tag: On ✓"
 
-          MEMORY_LIMIT=$(docker run --rm $IMAGE_TAG php -r "echo ini_get('memory_limit');")
+          # memory_limit (debe ser 512M)
+          MEMORY_LIMIT=$(docker run --rm $IMAGE_TAG php -r "echo ini_get('memory_limit');" | tr -d '\r\n ')
           if [ "$MEMORY_LIMIT" != "512M" ]; then
-            echo "❌ Error: memory_limit debería ser 512M, es $MEMORY_LIMIT"
+            echo "❌ Error: memory_limit debería ser 512M, es '$MEMORY_LIMIT'"
             exit 1
           fi
           echo "  - memory_limit: $MEMORY_LIMIT ✓"
 
-          UPLOAD_MAX=$(docker run --rm $IMAGE_TAG php -r "echo ini_get('upload_max_filesize');")
+          # upload_max_filesize (debe ser 64M)
+          UPLOAD_MAX=$(docker run --rm $IMAGE_TAG php -r "echo ini_get('upload_max_filesize');" | tr -d '\r\n ')
           if [ "$UPLOAD_MAX" != "64M" ]; then
-            echo "❌ Error: upload_max_filesize debería ser 64M, es $UPLOAD_MAX"
+            echo "❌ Error: upload_max_filesize debería ser 64M, es '$UPLOAD_MAX'"
             exit 1
           fi
           echo "  - upload_max_filesize: $UPLOAD_MAX ✓"
 
-          POST_MAX=$(docker run --rm $IMAGE_TAG php -r "echo ini_get('post_max_size');")
+          # post_max_size (debe ser 64M)
+          POST_MAX=$(docker run --rm $IMAGE_TAG php -r "echo ini_get('post_max_size');" | tr -d '\r\n ')
           if [ "$POST_MAX" != "64M" ]; then
-            echo "❌ Error: post_max_size debería ser 64M, es $POST_MAX"
+            echo "❌ Error: post_max_size debería ser 64M, es '$POST_MAX'"
             exit 1
           fi
           echo "  - post_max_size: $POST_MAX ✓"
 
-          MAX_EXEC=$(docker run --rm $IMAGE_TAG php -r "echo ini_get('max_execution_time');")
+          # max_execution_time (debe ser 300 segundos)
+          MAX_EXEC=$(docker run --rm $IMAGE_TAG php -r "echo ini_get('max_execution_time');" | tr -d '\r\n ')
           if [ "$MAX_EXEC" != "300" ]; then
-            echo "❌ Error: max_execution_time debería ser 300, es $MAX_EXEC"
+            echo "❌ Error: max_execution_time debería ser 300, es '$MAX_EXEC'"
             exit 1
           fi
           echo "  - max_execution_time: $MAX_EXEC ✓"
 
           # Validar Composer 1.x
           echo "✓ Verificando Composer..."
-          COMPOSER_VERSION=$(docker run --rm $IMAGE_TAG composer --version | grep -oP '\d+\.\d+\.\d+' | head -1)
-          COMPOSER_MAJOR=$(echo $COMPOSER_VERSION | cut -d. -f1)
+          COMPOSER_OUTPUT=$(docker run --rm $IMAGE_TAG composer --version 2>&1)
+          # Extraer versión usando sed (más portable que grep -P)
+          COMPOSER_VERSION=$(echo "$COMPOSER_OUTPUT" | sed -n 's/.*version \([0-9]\+\.[0-9]\+\.[0-9]\+\).*/\1/p' | head -1)
+          if [ -z "$COMPOSER_VERSION" ]; then
+            echo "❌ Error: No se pudo determinar la versión de Composer"
+            echo "Salida: $COMPOSER_OUTPUT"
+            exit 1
+          fi
+          COMPOSER_MAJOR=$(echo "$COMPOSER_VERSION" | cut -d. -f1)
           if [ "$COMPOSER_MAJOR" != "1" ]; then
             echo "❌ Error: Se esperaba Composer 1.x, se encontró $COMPOSER_VERSION"
             exit 1
@@ -129,17 +196,20 @@ jobs:
 
           # Validar usuario coder con UID 1000
           echo "✓ Verificando usuario coder..."
-          CODER_UID=$(docker run --rm $IMAGE_TAG id -u coder 2>/dev/null || echo "0")
+          CODER_UID=$(docker run --rm $IMAGE_TAG id -u coder 2>/dev/null | tr -d '\r\n ' || echo "0")
           if [ "$CODER_UID" != "1000" ]; then
-            echo "❌ Error: Usuario coder debería tener UID 1000, tiene $CODER_UID"
+            echo "❌ Error: Usuario coder debería tener UID 1000, tiene '$CODER_UID'"
             exit 1
           fi
           echo "  Usuario coder con UID 1000 ✓"
 
           # Validar mod_rewrite de Apache
           echo "✓ Verificando módulos de Apache..."
-          if ! docker run --rm $IMAGE_TAG apache2ctl -M 2>/dev/null | grep -q "rewrite_module"; then
+          APACHE_MODULES=$(docker run --rm $IMAGE_TAG apache2ctl -M 2>&1)
+          if ! echo "$APACHE_MODULES" | grep -q "rewrite_module"; then
             echo "❌ Error: Módulo rewrite de Apache no está habilitado"
+            echo "Módulos encontrados:"
+            echo "$APACHE_MODULES" | grep "_module" | head -5
             exit 1
           fi
           echo "  mod_rewrite habilitado ✓"
@@ -150,12 +220,19 @@ jobs:
             echo "❌ Error: Directorio /workspaces no existe"
             exit 1
           fi
+          # Verificar que es escribible por www-data
+          WORKDIR_OWNER=$(docker run --rm $IMAGE_TAG stat -c '%U' /workspaces 2>/dev/null || echo "unknown")
+          if [ "$WORKDIR_OWNER" != "www-data" ]; then
+            echo "⚠️  Advertencia: /workspaces no pertenece a www-data (dueño: $WORKDIR_OWNER)"
+          fi
           echo "  Directorio /workspaces existe ✓"
 
           # Validar puerto 80 expuesto
           echo "✓ Verificando puerto 80 expuesto..."
-          if ! docker inspect $IMAGE_TAG | grep -q '"80/tcp"'; then
+          EXPOSED_PORTS=$(docker inspect $IMAGE_TAG --format='{{json .Config.ExposedPorts}}' 2>&1)
+          if ! echo "$EXPOSED_PORTS" | grep -q '"80/tcp"'; then
             echo "❌ Error: Puerto 80 no está expuesto"
+            echo "Puertos expuestos: $EXPOSED_PORTS"
             exit 1
           fi
           echo "  Puerto 80 expuesto ✓"
