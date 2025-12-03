@@ -8,7 +8,6 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository_owner }}/php56-legacy
 
 jobs:
   build:
@@ -20,6 +19,14 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Set image name to lowercase
+        id: image_name
+        run: |
+          # Convertir el repository_owner a minúsculas para Docker Registry
+          IMAGE_NAME=$(echo "${{ github.repository_owner }}/php56-legacy" | tr '[:upper:]' '[:lower:]')
+          echo "image_name=$IMAGE_NAME" >> $GITHUB_OUTPUT
+          echo "Nombre de la imagen: $IMAGE_NAME"
 
       - name: Extract version from tag
         id: version
@@ -33,7 +40,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ steps.image_name.outputs.image_name }}
           tags: |
             type=raw,value=latest
             type=raw,value=${{ steps.version.outputs.version }}
@@ -50,7 +57,7 @@ jobs:
       - name: Validate Docker image
         run: |
           echo "🔍 Validando imagen Docker..."
-          IMAGE_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.version }}"
+          IMAGE_TAG="${{ env.REGISTRY }}/${{ steps.image_name.outputs.image_name }}:${{ steps.version.outputs.version }}"
 
           # Validar versión de PHP 5.6
           echo "✓ Verificando versión de PHP..."
